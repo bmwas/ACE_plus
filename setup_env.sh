@@ -15,12 +15,21 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-# Base model - FLUX.1-Fill-dev (Required for all configurations)
-# Option 1: Local path (uncomment and set your local path)
-# export FLUX_FILL_PATH="/path/to/FLUX.1-Fill-dev"
+# ===============================================================
+# IMPORTANT: Choose ONE of the options below for FLUX_FILL_PATH
+# ===============================================================
 
-# Option 2: Hugging Face path (recommended if you don't have the model downloaded)
-export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
+# OPTION 1: Local path (recommended for reliability)
+# Download the model manually from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev
+# Then point to your local copy:
+export FLUX_FILL_PATH="/path/to/local/FLUX.1-Fill-dev"
+
+# OPTION 2: HuggingFace path (may require HF_TOKEN to be set)
+# Uncomment the line below and comment out the local path above
+# export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
+
+# If using OPTION 2, you may need to set your HuggingFace token:
+# export HF_TOKEN="your_huggingface_token_here"
 
 # LoRA model paths
 # Option 1: ModelScope paths (default)
@@ -41,6 +50,19 @@ if [[ -z "$FLUX_FILL_PATH" ]]; then
   echo "WARNING: FLUX_FILL_PATH is not set properly!"
 else
   echo " FLUX_FILL_PATH = $FLUX_FILL_PATH"
+  
+  # Check if using local path and if it exists
+  if [[ "$FLUX_FILL_PATH" == "/"* ]] && [[ ! -d "$FLUX_FILL_PATH" ]]; then
+    echo "  WARNING: Local directory $FLUX_FILL_PATH does not exist!"
+    echo "  Please download the model from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev"
+    echo "  and update the path in this script."
+  fi
+  
+  # Check if using HuggingFace path and if HF_TOKEN is set
+  if [[ "$FLUX_FILL_PATH" == "hf://"* ]] && [[ -z "$HF_TOKEN" ]]; then
+    echo "  WARNING: Using HuggingFace path but HF_TOKEN is not set."
+    echo "  You may need to set HF_TOKEN if the model is not publicly accessible."
+  fi
 fi
 
 echo " PORTRAIT_MODEL_PATH = $PORTRAIT_MODEL_PATH"
