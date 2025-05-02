@@ -92,8 +92,8 @@ log_debug "  Seed:         $SEED"
 log_debug "  Output Path:  $OUTPUT_FILE"
 
 # Check if python environment is properly set up
-if ! command -v python &> /dev/null; then
-    log_error "Python is not installed or not in PATH"
+if ! command -v python3.10 &> /dev/null; then
+    log_error "Python 3.10 is not installed or not in PATH"
     exit 1
 fi
 
@@ -110,13 +110,13 @@ fi
 
 # Run the inference
 log_info "Running inference with LoRA model for task type: $TASK_TYPE"
-log_info "Command: python infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --save_path $OUTPUT_FILE"
+log_info "Command: python3.10 infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --save_path $OUTPUT_FILE"
 
 # Execute the python script with timing information
 log_info "Starting inference process..."
 START_TIME=$(date +%s)
 
-python infer_lora.py \
+python3.10 infer_lora.py \
     --instruction "$INSTRUCTION" \
     --output_h $OUTPUT_H \
     --output_w $OUTPUT_W \
