@@ -41,15 +41,47 @@ def run_one_case(pipe,
                 repainting_scale = None,
                 model_path = None,
                 **kwargs):
+    # Added for debugging
+    print("Input reference image path:", input_reference_image)
+    
     if input_image is not None:
-        input_image = Image.open(io.BytesIO(FS.get_object(input_image)))
-        input_image = pillow_convert(input_image, "RGB")
+        try:
+            # First try direct file loading
+            if os.path.exists(input_image):
+                input_image = Image.open(input_image).convert("RGB")
+            else:
+                # Fall back to the original method
+                input_image = Image.open(io.BytesIO(FS.get_object(input_image)))
+                input_image = pillow_convert(input_image, "RGB")
+        except Exception as e:
+            print(f"Error loading input image: {e}")
+            return None, seed
+            
     if input_mask is not None:
-        input_mask = Image.open(io.BytesIO(FS.get_object(input_mask)))
-        input_mask = pillow_convert(input_mask, "L")
+        try:
+            # First try direct file loading
+            if os.path.exists(input_mask):
+                input_mask = Image.open(input_mask).convert("L")
+            else:
+                # Fall back to the original method
+                input_mask = Image.open(io.BytesIO(FS.get_object(input_mask)))
+                input_mask = pillow_convert(input_mask, "L")
+        except Exception as e:
+            print(f"Error loading mask image: {e}")
+            return None, seed
+            
     if input_reference_image is not None:
-        input_reference_image = Image.open(io.BytesIO(FS.get_object(input_reference_image)))
-        input_reference_image = pillow_convert(input_reference_image, "RGB")
+        try:
+            # First try direct file loading
+            if os.path.exists(input_reference_image):
+                input_reference_image = Image.open(input_reference_image).convert("RGB")
+            else:
+                # Fall back to the original method
+                input_reference_image = Image.open(io.BytesIO(FS.get_object(input_reference_image)))
+                input_reference_image = pillow_convert(input_reference_image, "RGB")
+        except Exception as e:
+            print(f"Error loading reference image: {e}")
+            return None, seed
 
     image, seed = pipe(
         reference_image=input_reference_image,
@@ -65,6 +97,9 @@ def run_one_case(pipe,
         repainting_scale=repainting_scale or pipe.input.get("repainting_scale", 1.0),
         lora_path = model_path
     )
+    
+    # Make sure output directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     with FS.put_to(save_path) as local_path:
         image.save(local_path)
     return local_path, seed
@@ -225,4 +260,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
