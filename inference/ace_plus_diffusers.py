@@ -86,35 +86,66 @@ class ACEPlusDiffuserInference():
         if isinstance(prompt, str):
             prompt = [prompt]
         seed = seed if seed >= 0 else random.randint(0, 2 ** 32 - 1)
-        # edit_image, edit_mask, change_image, content_image, out_h, out_w, slice_w
-        image, mask, _, _, out_h, out_w, slice_w = self.image_processor.preprocess(reference_image, edit_image, edit_mask,
-                                                                             width = output_width,
-                                                                             height = output_height,
-                                                                             repainting_scale = repainting_scale)
-        h, w = image.shape[1:]
-        generator = torch.Generator("cpu").manual_seed(seed)
-        masked_image_latents = self.prepare_input(image, mask,
-                                               batch_size=len(prompt) , height=h, width=w, generator = generator)
+        
+        # Debug print to help diagnose issues
+        print(f"Reference image type before preprocessing: {type(reference_image)}")
+        if reference_image is not None and hasattr(reference_image, 'size'):
+            print(f"Reference image size before preprocessing: {reference_image.size}")
+            
+        # Make sure we're working with PIL images for the processor
+        try:
+            # edit_image, edit_mask, change_image, content_image, out_h, out_w, slice_w
+            image, mask, _, _, out_h, out_w, slice_w = self.image_processor.preprocess(reference_image, edit_image, edit_mask,
+                                                                                width = output_width,
+                                                                                height = output_height,
+                                                                                repainting_scale = repainting_scale)
+            
+            print(f"Image shape after ACE+ preprocessing: {image.shape if hasattr(image, 'shape') else 'Not a tensor'}")
+            
+            h, w = image.shape[1:]
+            generator = torch.Generator("cpu").manual_seed(seed)
+            masked_image_latents = self.prepare_input(image, mask,
+                                                    batch_size=len(prompt), height=h, width=w, generator=generator)
 
-        if lora_path is not None:
-            with FS.get_from(lora_path) as local_path:
-                self.pipe.load_lora_weights(local_path)
+            if lora_path is not None:
+                with FS.get_from(lora_path) as local_path:
+                    self.pipe.load_lora_weights(local_path)
+                    
+            # Override the pipe's image processor with a dummy processor that just returns the input
+            # This avoids the error when the flux pipeline's internal processor is called
+            original_processor = self.pipe.image_processor
+            
+            class DummyProcessor:
+                def preprocess(self, image, **kwargs):
+                    return image
 
-
-
-        image = self.pipe(
-            prompt=prompt,
-            masked_image_latents=masked_image_latents,
-            height=h,
-            width=w,
-            guidance_scale=guide_scale,
-            num_inference_steps=sample_steps,
-            max_sequence_length=512,
-            generator=generator
-        ).images[0]
-        if lora_path is not None:
-            self.pipe.unload_lora_weights()
-        return self.image_processor.postprocess(image, slice_w, out_w, out_h), seed
+            self.pipe.image_processor = DummyProcessor()
+            
+            try:
+                image = self.pipe(
+                    prompt=prompt,
+                    masked_image_latents=masked_image_latents,
+                    height=h,
+                    width=w,
+                    guidance_scale=guide_scale,
+                    num_inference_steps=sample_steps,
+                    max_sequence_length=512,
+                    generator=generator
+                ).images[0]
+            finally:
+                # Restore original processor
+                self.pipe.image_processor = original_processor
+                
+            if lora_path is not None:
+                self.pipe.unload_lora_weights()
+                
+            return self.image_processor.postprocess(image, slice_w, out_w, out_h), seed
+            
+        except Exception as e:
+            print(f"Error in ACE+ diffuser pipeline: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
 
 
 if __name__ == '__main__':
