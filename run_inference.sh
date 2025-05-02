@@ -86,12 +86,22 @@ fi
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_FILE="${OUTPUT_DIR}/generated_${TASK_TYPE}_${TIMESTAMP}.png"
 
+# Set environment variables for model paths
+# This is critical for the model to find the correct LoRA files
+log_info "Setting up environment variables for models"
+export PORTRAIT_MODEL_PATH="hf://ali-vilab/ACE_Plus@portrait/ace_plus_lora_portrait.safetensors"
+export SUBJECT_MODEL_PATH="hf://ali-vilab/ACE_Plus@subject/ace_plus_lora_subject.safetensors"
+export LOCAL_MODEL_PATH="hf://ali-vilab/ACE_Plus@local_editing/ace_plus_lora_local_editing.safetensors"
+
 log_info "Starting inference process with the following parameters:"
 log_debug "  Task Type:    $TASK_TYPE"
 log_debug "  Instruction:  $INSTRUCTION"
 log_debug "  Output Size:  ${OUTPUT_H}x${OUTPUT_W}"
 log_debug "  Seed:         $SEED"
 log_debug "  Output Path:  $OUTPUT_FILE"
+log_debug "  Portrait Model Path: $PORTRAIT_MODEL_PATH"
+log_debug "  Subject Model Path:  $SUBJECT_MODEL_PATH"
+log_debug "  Local Edit Model Path: $LOCAL_MODEL_PATH"
 
 # Check if python environment is properly set up
 if ! command -v python3.10 &> /dev/null; then
@@ -142,7 +152,7 @@ if [ $RESULT -eq 0 ]; then
         log_debug "Generated image size: $FILE_SIZE"
         
         echo "=========================================================="
-        log_info "Generation successful! "
+        log_info "Generation successful!"
         echo "Image saved to: $OUTPUT_FILE"
         echo "=========================================================="
     else
@@ -151,7 +161,7 @@ if [ $RESULT -eq 0 ]; then
 else
     log_error "Inference failed with exit code $RESULT"
     echo "=========================================================="
-    log_error "Generation failed! "
+    log_error "Generation failed!"
     echo "=========================================================="
     exit 1
 fi
