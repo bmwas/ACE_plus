@@ -21,7 +21,7 @@ fi
 
 # OPTION 1: Local path approach (recommended due to HuggingFace access issues)
 # Create a directory for models and set the path to it:
-MODEL_DIR="$HOME/ACE_plus_models/FLUX.1-Fill-dev"
+MODEL_DIR="$HOME/ACE_plus/FLUX.1-Fill-dev"
 mkdir -p "$MODEL_DIR"
 export FLUX_FILL_PATH="$MODEL_DIR"
 
