@@ -27,7 +27,7 @@ log_info "ACE_plus LoRA Model Inference Script"
 echo "=========================================================="
 
 # Set default parameters
-TASK_TYPE="subject"  # Options: portrait, subject, local_editing
+TASK_TYPE="SUBJECT"  # Options: PORTRAIT, SUBJECT, LOCAL_EDITING
 OUTPUT_DIR="./examples/output_images"
 SEED=42
 OUTPUT_H=512  # Using smaller resolution for faster inference
@@ -39,6 +39,8 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --task_type)
             TASK_TYPE="$2"
+            # Convert to uppercase if needed
+            TASK_TYPE=$(echo "$TASK_TYPE" | tr '[:lower:]' '[:upper:]')
             shift 2
             ;;
         --instruction)
@@ -60,7 +62,7 @@ while [[ $# -gt 0 ]]; do
         --help)
             echo "Usage: $0 [options]"
             echo "Options:"
-            echo "  --task_type     Model type: portrait, subject, or local_editing (default: subject)"
+            echo "  --task_type     Model type: PORTRAIT, SUBJECT, or LOCAL_EDITING (default: SUBJECT)"
             echo "  --instruction   Text prompt for generation (default: landscape scene)"
             echo "  --output_h      Output height (default: 512)"
             echo "  --output_w      Output width (default: 512)"
@@ -140,7 +142,7 @@ if [ $RESULT -eq 0 ]; then
         log_debug "Generated image size: $FILE_SIZE"
         
         echo "=========================================================="
-        log_info "Generation successful! 🎉"
+        log_info "Generation successful! "
         echo "Image saved to: $OUTPUT_FILE"
         echo "=========================================================="
     else
@@ -149,7 +151,7 @@ if [ $RESULT -eq 0 ]; then
 else
     log_error "Inference failed with exit code $RESULT"
     echo "=========================================================="
-    log_error "Generation failed! 😔"
+    log_error "Generation failed! "
     echo "=========================================================="
     exit 1
 fi
@@ -157,10 +159,10 @@ fi
 # Print advanced usage examples
 log_info "Advanced usage examples:"
 echo "  1. Portrait generation:"
-echo "     ./run_inference.sh --task_type portrait --instruction \"A woman with long blonde hair and blue eyes, professional portrait\""
+echo "     ./run_inference.sh --task_type PORTRAIT --instruction \"A woman with long blonde hair and blue eyes, professional portrait\""
 echo
 echo "  2. Subject-driven generation:"
-echo "     ./run_inference.sh --task_type subject --instruction \"Display the logo on a billboard in a city street\""
+echo "     ./run_inference.sh --task_type SUBJECT --instruction \"Display the logo on a billboard in a city street\""
 echo
 echo "  3. With reference image (requires additional parameters in script):"
 echo "     # Modify script to add --input_reference_image parameter"
