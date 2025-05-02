@@ -18,20 +18,20 @@ from scepter.modules.utils.config import Config
 from scepter.modules.utils.distribute import we
 from scepter.modules.utils.file_system import FS
 
-# Setup filesystem clients
+# Initialize filesystem clients
 fs_list = [
     Config(cfg_dict={"NAME": "HuggingfaceFs", "TEMP_DIR": "./cache"}, load=False),
-    Config(cfg_dict={"NAME": "ModelscopeFs", "TEMP_DIR": "./cache"}, load=False),
-    Config(cfg_dict={"NAME": "HttpFs", "TEMP_DIR": "./cache"}, load=False),
-    Config(cfg_dict={"NAME": "LocalFs", "TEMP_DIR": "./cache"}, load=False),
+    Config(cfg_dict={"NAME": "ModelscopeFs",  "TEMP_DIR": "./cache"}, load=False),
+    Config(cfg_dict={"NAME": "HttpFs",        "TEMP_DIR": "./cache"}, load=False),
+    Config(cfg_dict={"NAME": "LocalFs",       "TEMP_DIR": "./cache"}, load=False),
 ]
 for one_fs in fs_list:
     FS.init_fs_client(one_fs)
 
-# Increase CSV field size limit
+# Prevent CSV field overflow
 csv.field_size_limit(sys.maxsize)
 
-# Import your inference classes & examples
+# Inference and examples imports
 from inference.ace_plus_diffusers import ACEPlusDiffuserInference
 from inference.utils import edit_preprocess
 from examples.examples import all_examples
@@ -45,25 +45,24 @@ lock = threading.Lock()
 class DemoUI:
     def __init__(self,
                  infer_dir="./config/ace_plus_diffusers_infer.yaml",
-                 model_list='./models/model_zoo.yaml'):
+                 model_list="./models/model_zoo.yaml"):
         # Load main model configs
         self.model_choices = {}
         self.default_model_name = ""
-        for cfg_path in [infer_dir]:
-            cfg = Config(load=True, cfg_file=cfg_path)
-            name = cfg.NAME
-            self.model_choices[name] = cfg
+        for p in [infer_dir]:
+            cfg = Config(load=True, cfg_file=p)
+            self.model_choices[cfg.NAME] = cfg
             if cfg.IS_DEFAULT:
-                self.default_model_name = name
+                self.default_model_name = cfg.NAME
         if not self.default_model_name:
             self.default_model_name = next(iter(self.model_choices))
         self.model_name = self.default_model_name
         main_cfg = self.model_choices[self.model_name]
-        infer_type = main_cfg.get("INFERENCE_TYPE", "ACE")
-        self.pipe = inference_dict[infer_type]()
+        inf_type = main_cfg.get("INFERENCE_TYPE", "ACE")
+        self.pipe = inference_dict[inf_type]()
         self.pipe.init_from_cfg(main_cfg)
 
-        # Load task-specific Lora models
+        # Load task-specific LoRA models
         task_cfg = Config(load=True, cfg_file=model_list)
         self.task_model = {}
         self.task_model_list = []
@@ -74,7 +73,8 @@ class DemoUI:
             self.task_model[key] = tcfg
             self.task_model_list.append(key)
             for pre in tcfg.get("PREPROCESSOR", []):
-                if pre["TYPE"] in self.edit_type_dict: continue
+                if pre["TYPE"] in self.edit_type_dict:
+                    continue
                 pre["REPAINTING_SCALE"] = tcfg.get("REPAINTING_SCALE", 1.0)
                 self.edit_type_dict[pre["TYPE"]] = pre
                 self.edit_type_list.append(pre["TYPE"])
@@ -93,9 +93,9 @@ class DemoUI:
     def construct_edit_image(self, img, mask):
         if img is None or mask is None:
             return None
-        rgb = pillow_convert(img, "RGB")
+        rgb  = pillow_convert(img, "RGB")
         rgba = pillow_convert(img, "RGBA")
-        m = pillow_convert(mask, "L")
+        m    = pillow_convert(mask, "L")
         arr1 = np.array(rgb)
         arr2 = np.array(m)[:, :, None]
         layer = Image.fromarray(np.concatenate((arr1, arr2), axis=2))
@@ -107,7 +107,7 @@ class DemoUI:
                 self.output_image = gr.Image(type="pil", interactive=False, height=600)
             with gr.Column(scale=1) as self.side_panel:
                 with gr.Accordion("Related Input Image", open=False):
-                    self.pre_img = gr.Image(type="pil", interactive=False, height=600)
+                    self.pre_img  = gr.Image(type="pil", interactive=False, height=600)
                     self.pre_mask = gr.Image(type="pil", interactive=False, height=600)
 
         with gr.Row():
@@ -130,26 +130,27 @@ class DemoUI:
         self.log_box = gr.Markdown(label="System Log")
 
         with gr.Row():
-            self.prompt_box = gr.Textbox(
-                placeholder='Type instruction (e.g. "add glasses")',
-                label="Instruction", lines=1
+            self.prompt_box   = gr.Textbox(
+                placeholder='Type your instruction here',
+                label="Instruction",
+                lines=1
             )
             self.generate_btn = gr.Button("Generate", variant="primary")
 
         with gr.Accordion("Advanced", open=True):
             with gr.Row():
-                self.ref_img_input = gr.Image(type="pil", label="Reference Image", interactive=True, height=300)
-                self.edit_img_input = gr.ImageMask(type="pil", label="Edit Image", interactive=True, height=300)
+                self.ref_img_input  = gr.Image(type="pil", label="Reference Image", height=300)
+                self.edit_img_input = gr.ImageMask(type="pil", label="Edit Image", height=300)
             with gr.Row():
-                self.steps_slider = gr.Slider(1, 1000, value=self.pipe.input.get("sample_steps", 20), label="Steps")
-                self.scale_slider = gr.Slider(1.0, 100.0, value=self.pipe.input.get("guide_scale", 4.5), label="Guidance Scale")
-                self.seed_slider  = gr.Slider(-1, 10_000_000, value=-1, label="Seed")
+                self.steps_slider   = gr.Slider(1, 1000, value=self.pipe.input.get("sample_steps", 20), label="Steps")
+                self.scale_slider   = gr.Slider(1.0, 100.0, value=self.pipe.input.get("guide_scale", 4.5), label="Guidance Scale")
+                self.seed_slider    = gr.Slider(-1, 10_000_000, value=-1, label="Seed")
             with gr.Row():
-                self.h_slider = gr.Slider(256, 1440, value=self.pipe.input.get("output_height", 1024), label="Height")
-                self.w_slider = gr.Slider(256, 1440, value=self.pipe.input.get("output_width", 1024), label="Width")
+                self.h_slider       = gr.Slider(256, 1440, value=self.pipe.input.get("output_height", 1024), label="Height")
+                self.w_slider       = gr.Slider(256, 1440, value=self.pipe.input.get("output_width", 1024), label="Width")
                 self.repaint_slider = gr.Slider(0.0, 1.0, value=self.pipe.input.get("repainting_scale", 1.0), label="Repainting Scale")
 
-        # Hidden examples inputs
+        # Hidden for examples
         self.ex_edit_img  = gr.Image(type="pil", visible=False)
         self.ex_edit_mask = gr.Image(type="pil", image_mode="L", visible=False)
 
@@ -199,19 +200,16 @@ class DemoUI:
             on_model_change,
             inputs=[self.model_dropdown],
             outputs=[
-                self.model_dropdown,
-                self.prompt_box,
-                self.steps_slider,
-                self.scale_slider,
-                self.h_slider,
-                self.w_slider,
+                self.model_dropdown, self.prompt_box,
+                self.steps_slider, self.scale_slider,
+                self.h_slider, self.w_slider,
                 self.repaint_slider
             ]
         )
 
         def on_task_change(task):
-            cfg = self.task_model[task]
-            choices = ["repainting"] + [p["TYPE"] for p in cfg.get("PREPROCESSOR", [])]
+            proc = self.task_model[task].get("PREPROCESSOR", [])
+            choices = ["repainting"] + [p["TYPE"] for p in proc]
             return gr.update(choices=choices, value=choices[0])
 
         self.task_dropdown.change(
@@ -221,7 +219,7 @@ class DemoUI:
         )
 
         def on_edit_change(edit_type):
-            info = self.edit_type_dict.get(edit_type, {}) or {}
+            info = (self.edit_type_dict.get(edit_type) or {})
             return gr.update(value=info.get("REPAINTING_SCALE", 1.0))
 
         self.edit_dropdown.change(
@@ -230,6 +228,7 @@ class DemoUI:
             outputs=[self.repaint_slider]
         )
 
+        # <--- FIXED: outputs must be components, not dicts
         self.generate_btn.click(
             self.run_chat,
             inputs=[
@@ -247,7 +246,7 @@ class DemoUI:
             ],
             outputs=[
                 self.output_image,
-                gr.update(visible=True),  # side_panel
+                self.side_panel,
                 self.pre_img,
                 self.pre_mask,
                 self.log_box
@@ -256,12 +255,11 @@ class DemoUI:
         )
 
     def preprocess_images(self, ref_img, edit_dict):
-        # Returns edit_img, edit_mask, ref_img, ok, error_msg
         if ref_img is not None:
             ref_img = pillow_convert(ref_img, "RGB")
         if edit_dict is None:
             return None, None, ref_img, True, ""
-        bg = edit_dict["background"]
+        bg   = edit_dict["background"]
         mask = np.array(edit_dict["layers"][0])[:, :, 3]
         if bg.sum() < 1 or mask.sum() < 1:
             return None, None, ref_img, False, "Please draw the mask region."
@@ -282,18 +280,18 @@ class DemoUI:
         pre = edit_preprocess(self.edit_type_dict[edit_type], we.device_id, edit_img, edit_mask)
         start = time.time()
         out_img, out_seed = self.pipe(
-            reference_image=ref_img,
-            edit_image=pre,
-            edit_mask=edit_mask,
-            prompt=prompt,
-            output_height=height,
-            output_width=width,
-            sampler='flow_euler',
-            sample_steps=steps,
-            guide_scale=scale,
-            seed=seed,
-            repainting_scale=repaint_scale,
-            lora_path=self.task_model[task]["MODEL_PATH"]
+            reference_image  = ref_img,
+            edit_image       = pre,
+            edit_mask        = edit_mask,
+            prompt           = prompt,
+            output_height    = height,
+            output_width     = width,
+            sampler          = 'flow_euler',
+            sample_steps     = steps,
+            guide_scale      = scale,
+            seed             = seed,
+            repainting_scale = repaint_scale,
+            lora_path        = self.task_model[task]["MODEL_PATH"]
         )
         dt = time.time() - start
         log = f"prompt: {prompt}; seed: {out_seed}; time: {dt:.2f}s"
@@ -307,18 +305,18 @@ class DemoUI:
         pre = edit_preprocess(self.edit_type_dict[edit], we.device_id, e_img, e_mask)
         start = time.time()
         out_img, out_seed = self.pipe(
-            reference_image=ref_img,
-            edit_image=pre,
-            edit_mask=e_mask,
-            prompt=prompt,
-            output_height=height,
-            output_width=width,
-            sampler='flow_euler',
-            sample_steps=self.pipe.input.get("sample_steps", 20),
-            guide_scale=self.pipe.input.get("guide_scale", 4.5),
-            seed=seed,
-            repainting_scale=self.edit_type_dict.get(edit, {}).get("REPAINTING_SCALE", 1.0),
-            lora_path=self.task_model[task]["MODEL_PATH"]
+            reference_image  = ref_img,
+            edit_image       = pre,
+            edit_mask        = e_mask,
+            prompt           = prompt,
+            output_height    = height,
+            output_width     = width,
+            sampler          = 'flow_euler',
+            sample_steps     = self.pipe.input.get("sample_steps", 20),
+            guide_scale      = self.pipe.input.get("guide_scale", 4.5),
+            seed             = seed,
+            repainting_scale = self.edit_type_dict.get(edit, {}).get("REPAINTING_SCALE", 1.0),
+            lora_path        = self.task_model[task]["MODEL_PATH"]
         )
         dt = time.time() - start
         log = f"prompt: {prompt}; seed: {out_seed}; time: {dt:.2f}s"
@@ -342,6 +340,6 @@ def run_gradio(cfg):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Scepter Gradio Demo")
     parser.add_argument("--server_port", type=int, default=2345)
-    parser.add_argument("--root_path", type=str, default="")
+    parser.add_argument("--root_path",   type=str, default="")
     cfg = Config(load=True, parser_ins=parser)
     run_gradio(cfg)
