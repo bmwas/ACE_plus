@@ -508,6 +508,7 @@ def run_gr(cfg):
         chatbot.set_callbacks()
         demo.launch(server_name='0.0.0.0',
                     server_port=cfg.args.server_port,
+                    share=True,
                     root_path=cfg.args.root_path)
 
 

@@ -47,6 +47,9 @@ export SUBJECT_MODEL_PATH="ms://iic/ACE_Plus@subject/comfyui_subject_lora16.safe
 export LOCAL_MODEL_PATH="ms://iic/ACE_Plus@local_editing/comfyui_local_lora16.safetensors"
 export ACE_PLUS_FFT_MODEL="ms://iic/ACE_Plus@ace_plus_fft.safetensors.safetensors"
 
+## Gradio export issue
+export GRADIO_SHARE=1
+
 # ── Sanity checks ────────────────────────────────────────────────────────────
 echo "FLUX_FILL_PATH     = $FLUX_FILL_PATH"
 echo "PORTRAIT_MODEL_PATH= $PORTRAIT_MODEL_PATH"
