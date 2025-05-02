@@ -257,10 +257,10 @@ def run():
 
     else:
         print('DEBUG: task_model_cfg:', task_model_cfg)
-        print('DEBUG: task_model_cfg.__dict__:', task_model_cfg.__dict__)
+        print('DEBUG: task_model_cfg.MODEL:', task_model_cfg.MODEL)
         print('DEBUG: task_model_cfg.MODEL keys:', list(task_model_cfg.MODEL.keys()))
         print('DEBUG: cfg.args.task_type.upper():', cfg.args.task_type.upper())
-        assert cfg.args.task_type.upper() in task_model_cfg.MODEL
+        assert cfg.args.task_type.upper() in task_model_cfg.MODEL.keys()
         params = {
             "input_image": cfg.args.input_image,
             "input_mask": cfg.args.input_mask,
