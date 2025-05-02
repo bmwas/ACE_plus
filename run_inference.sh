@@ -89,9 +89,9 @@ OUTPUT_FILE="${OUTPUT_DIR}/generated_${TASK_TYPE}_${TIMESTAMP}.png"
 # Set environment variables for model paths
 # This is critical for the model to find the correct LoRA files
 log_info "Setting up environment variables for models"
-export PORTRAIT_MODEL_PATH="hf://ali-vilab/ACE_Plus@portrait/ace_plus_lora_portrait.safetensors"
-export SUBJECT_MODEL_PATH="hf://ali-vilab/ACE_Plus@subject/ace_plus_lora_subject.safetensors"
-export LOCAL_MODEL_PATH="hf://ali-vilab/ACE_Plus@local_editing/ace_plus_lora_local_editing.safetensors"
+export PORTRAIT_MODEL_PATH="ms://iic/ACE_Plus@portrait/comfyui_portrait_lora64.safetensors"
+export SUBJECT_MODEL_PATH="ms://iic/ACE_Plus@subject/comfyui_subject_lora16.safetensors"
+export LOCAL_MODEL_PATH="ms://iic/ACE_Plus@local_editing/comfyui_local_lora16.safetensors"
 
 log_info "Starting inference process with the following parameters:"
 log_debug "  Task Type:    $TASK_TYPE"
