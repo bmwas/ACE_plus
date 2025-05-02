@@ -4,7 +4,7 @@ import argparse
 import glob
 import io
 import os
-
+import numpy as np
 from PIL import Image
 from scepter.modules.transform.io import pillow_convert
 from scepter.modules.utils.config import Config
@@ -44,65 +44,80 @@ def run_one_case(pipe,
     # Added for debugging
     print("Input reference image path:", input_reference_image)
     
-    if input_image is not None:
-        try:
-            # First try direct file loading
-            if os.path.exists(input_image):
-                input_image = Image.open(input_image).convert("RGB")
-            else:
-                # Fall back to the original method
-                input_image = Image.open(io.BytesIO(FS.get_object(input_image)))
-                input_image = pillow_convert(input_image, "RGB")
-        except Exception as e:
-            print(f"Error loading input image: {e}")
-            return None, seed
+    # Create a function to safely load images with better error handling
+    def load_image_safely(image_path, mode="RGB"):
+        if image_path is None:
+            return None
             
-    if input_mask is not None:
+        print(f"Loading image from: {image_path}")
+        
         try:
             # First try direct file loading
-            if os.path.exists(input_mask):
-                input_mask = Image.open(input_mask).convert("L")
+            if os.path.exists(image_path):
+                print(f"Loading using direct file path")
+                return Image.open(image_path).convert(mode)
             else:
                 # Fall back to the original method
-                input_mask = Image.open(io.BytesIO(FS.get_object(input_mask)))
-                input_mask = pillow_convert(input_mask, "L")
+                print(f"Loading using FS.get_object")
+                image_data = FS.get_object(image_path)
+                if image_data is None:
+                    print(f"Error: FS.get_object returned None for {image_path}")
+                    return None
+                    
+                img = Image.open(io.BytesIO(image_data))
+                return pillow_convert(img, mode)
         except Exception as e:
-            print(f"Error loading mask image: {e}")
-            return None, seed
-            
-    if input_reference_image is not None:
-        try:
-            # First try direct file loading
-            if os.path.exists(input_reference_image):
-                input_reference_image = Image.open(input_reference_image).convert("RGB")
-            else:
-                # Fall back to the original method
-                input_reference_image = Image.open(io.BytesIO(FS.get_object(input_reference_image)))
-                input_reference_image = pillow_convert(input_reference_image, "RGB")
-        except Exception as e:
-            print(f"Error loading reference image: {e}")
-            return None, seed
-
-    image, seed = pipe(
-        reference_image=input_reference_image,
-        edit_image=input_image,
-        edit_mask=input_mask,
-        prompt=instruction,
-        output_height=output_h,
-        output_width=output_w,
-        sampler='flow_euler',
-        sample_steps=sample_steps or pipe.input.get("sample_steps", 28),
-        guide_scale=guide_scale or pipe.input.get("guide_scale", 50),
-        seed=seed,
-        repainting_scale=repainting_scale or pipe.input.get("repainting_scale", 1.0),
-        lora_path = model_path
-    )
+            print(f"Error loading image '{image_path}': {e}")
+            return None
+    
+    # Load all images
+    input_image_pil = load_image_safely(input_image, "RGB") 
+    input_mask_pil = load_image_safely(input_mask, "L")
+    input_reference_image_pil = load_image_safely(input_reference_image, "RGB")
+    
+    # Check if images were loaded correctly
+    if input_reference_image is not None and input_reference_image_pil is None:
+        print(f"Failed to load reference image: {input_reference_image}")
+        return None, seed
+        
+    # Print image types for debugging
+    print(f"Reference image type: {type(input_reference_image_pil)}")
+    if input_reference_image_pil is not None:
+        print(f"Reference image size: {input_reference_image_pil.size}")
+    
+    # Call the pipeline
+    try:
+        image, seed = pipe(
+            reference_image=input_reference_image_pil,
+            edit_image=input_image_pil,
+            edit_mask=input_mask_pil,
+            prompt=instruction,
+            output_height=output_h,
+            output_width=output_w,
+            sampler='flow_euler',
+            sample_steps=sample_steps or pipe.input.get("sample_steps", 28),
+            guide_scale=guide_scale or pipe.input.get("guide_scale", 50),
+            seed=seed,
+            repainting_scale=repainting_scale or pipe.input.get("repainting_scale", 1.0),
+            lora_path=model_path
+        )
+    except Exception as e:
+        print(f"Error in pipeline: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, seed
     
     # Make sure output directory exists
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    with FS.put_to(save_path) as local_path:
-        image.save(local_path)
-    return local_path, seed
+    
+    # Save the image
+    try:
+        with FS.put_to(save_path) as local_path:
+            image.save(local_path)
+        return local_path, seed
+    except Exception as e:
+        print(f"Error saving image: {e}")
+        return None, seed
 
 
 def run():
