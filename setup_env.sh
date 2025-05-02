@@ -19,16 +19,24 @@ fi
 # IMPORTANT: Choose ONE of the options below for FLUX_FILL_PATH
 # ===============================================================
 
-# OPTION 1: Using HuggingFace path (try this first)
-export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
+# OPTION 1: Local path approach (recommended due to HuggingFace access issues)
+# Create a directory for models and set the path to it:
+MODEL_DIR="$HOME/ACE_plus_models/FLUX.1-Fill-dev"
+mkdir -p "$MODEL_DIR"
+export FLUX_FILL_PATH="$MODEL_DIR"
 
-# If you encounter authentication issues, set your HuggingFace token:
-# export HF_TOKEN="your_huggingface_token_here"
+echo ""
+echo "============================================================="
+echo "IMPORTANT: You need to download the FLUX.1-Fill-dev model files"
+echo "and place them in: $MODEL_DIR"
+echo "Download from: https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev"
+echo "============================================================="
+echo ""
 
-# OPTION 2: Local path (use if HuggingFace method doesn't work)
-# Download the model manually from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev 
-# Then uncomment and set the path below (use a path in your home directory):
-# export FLUX_FILL_PATH="$HOME/models/FLUX.1-Fill-dev"
+# OPTION 2: Using HuggingFace path (not recommended unless you have HF authentication)
+# Uncomment the line below and comment out the local path section above if you want to try this
+# export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
+# export HF_TOKEN="your_huggingface_token_here"  # You may need to set this
 
 # LoRA model paths
 # Option 1: ModelScope paths (default)
@@ -50,11 +58,17 @@ if [[ -z "$FLUX_FILL_PATH" ]]; then
 else
   echo " FLUX_FILL_PATH = $FLUX_FILL_PATH"
   
-  # Check if using local path and if it exists
-  if [[ "$FLUX_FILL_PATH" == "/"* ]] && [[ ! -d "$FLUX_FILL_PATH" ]]; then
-    echo "  WARNING: Local directory $FLUX_FILL_PATH does not exist!"
-    echo "  Please download the model from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev"
-    echo "  and update the path in this script."
+  # Check if using local path and if it has model files
+  if [[ "$FLUX_FILL_PATH" != "hf://"* ]]; then
+    if [[ ! -d "$FLUX_FILL_PATH" ]]; then
+      echo "  WARNING: Local directory $FLUX_FILL_PATH does not exist!"
+    else
+      # Check if directory is empty
+      if [ -z "$(ls -A "$FLUX_FILL_PATH")" ]; then
+        echo "  WARNING: Directory $FLUX_FILL_PATH exists but is empty!"
+        echo "  Please download the model files from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev"
+      fi
+    fi
   fi
   
   # Check if using HuggingFace path and if HF_TOKEN is set
