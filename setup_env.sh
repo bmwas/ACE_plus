@@ -19,17 +19,16 @@ fi
 # IMPORTANT: Choose ONE of the options below for FLUX_FILL_PATH
 # ===============================================================
 
-# OPTION 1: Local path (recommended for reliability)
-# Download the model manually from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev
-# Then point to your local copy:
-export FLUX_FILL_PATH="/path/to/local/FLUX.1-Fill-dev"
+# OPTION 1: Using HuggingFace path (try this first)
+export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
 
-# OPTION 2: HuggingFace path (may require HF_TOKEN to be set)
-# Uncomment the line below and comment out the local path above
-# export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"
-
-# If using OPTION 2, you may need to set your HuggingFace token:
+# If you encounter authentication issues, set your HuggingFace token:
 # export HF_TOKEN="your_huggingface_token_here"
+
+# OPTION 2: Local path (use if HuggingFace method doesn't work)
+# Download the model manually from https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev 
+# Then uncomment and set the path below (use a path in your home directory):
+# export FLUX_FILL_PATH="$HOME/models/FLUX.1-Fill-dev"
 
 # LoRA model paths
 # Option 1: ModelScope paths (default)
