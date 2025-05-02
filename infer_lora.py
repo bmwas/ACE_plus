@@ -256,7 +256,8 @@ def run():
             local_path, seed = run_one_case(pipe, **example)
 
     else:
-        print('DEBUG: task_model_cfg keys:', list(task_model_cfg.keys()))
+        print('DEBUG: task_model_cfg:', task_model_cfg)
+        print('DEBUG: task_model_cfg.__dict__:', task_model_cfg.__dict__)
         print('DEBUG: task_model_cfg.MODEL keys:', list(task_model_cfg.MODEL.keys()))
         print('DEBUG: cfg.args.task_type.upper():', cfg.args.task_type.upper())
         assert cfg.args.task_type.upper() in task_model_cfg.MODEL
