@@ -33,7 +33,7 @@ SEED=42
 OUTPUT_H=512  # Using smaller resolution for faster inference
 OUTPUT_W=512
 INSTRUCTION="A beautiful landscape with mountains, clear blue sky, and a lake"
-INPUT_REFERENCE_IMAGE="./assets/samples/control/1_1_m.webp"
+INPUT_REFERENCE_IMAGE="./assets/samples/control/resuzed_balnk.webp"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -72,7 +72,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --output_h      Output height (default: 512)"
             echo "  --output_w      Output width (default: 512)"
             echo "  --seed          Random seed for reproducibility (default: 42)"
-            echo "  --input_reference_image Path to reference image (default: ./assets/samples/control/1_1_m.webp)"
+            echo "  --input_reference_image Path to reference image (default: ./assets/samples/control/resuzed_balnk.webp)"
             exit 0
             ;;
         *)
@@ -177,10 +177,10 @@ fi
 # Print advanced usage examples
 log_info "Advanced usage examples:"
 echo "  1. Portrait generation:"
-echo "     ./run_inference.sh --task_type portrait --instruction \"A woman with long blonde hair and blue eyes, professional portrait\" --input_reference_image ./assets/samples/control/1_1_m.webp"
+echo "     ./run_inference.sh --task_type portrait --instruction \"A woman with long blonde hair and blue eyes, professional portrait\" --input_reference_image ./assets/samples/control/resuzed_balnk.webp"
 echo
 echo "  2. Subject-driven generation:"
-echo "     ./run_inference.sh --task_type subject --instruction \"Display the logo on a billboard in a city street\" --input_reference_image ./assets/samples/control/1_1_m.webp"
+echo "     ./run_inference.sh --task_type subject --instruction \"Display the logo on a billboard in a city street\" --input_reference_image ./assets/samples/control/resuzed_balnk.webp"
 echo
 echo "  3. With reference image (requires additional parameters in script):"
 echo "     ./run_inference.sh --task_type subject --instruction \"Any prompt\" --input_reference_image ./path/to/your/reference.jpg"
