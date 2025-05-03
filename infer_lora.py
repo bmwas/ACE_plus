@@ -44,6 +44,17 @@ def run_one_case(pipe,
     # Added for debugging
     print("Input reference image path:", input_reference_image)
     
+    print("\n--- DEBUG: Arguments to run_one_case ---")
+    print(f"input_image: {input_image}")
+    print(f"input_mask: {input_mask}")
+    print(f"input_reference_image: {input_reference_image}")
+    print(f"save_path: {save_path}")
+    print(f"instruction: {instruction}")
+    print(f"output_h: {output_h}, output_w: {output_w}")
+    print(f"seed: {seed}")
+    print(f"model_path: {model_path}")
+    print("--------------------------------------\n")
+    
     # Create a function to safely load images with better error handling
     def load_image_safely(image_path, mode="RGB"):
         if image_path is None:
@@ -74,6 +85,9 @@ def run_one_case(pipe,
     input_image_pil = load_image_safely(input_image, "RGB") 
     input_mask_pil = load_image_safely(input_mask, "L")
     input_reference_image_pil = load_image_safely(input_reference_image, "RGB")
+    print(f"Loaded input_image_pil: {input_image_pil}")
+    print(f"Loaded input_mask_pil: {input_mask_pil}")
+    print(f"Loaded input_reference_image_pil: {input_reference_image_pil}")
     
     # Check if images were loaded correctly
     if input_reference_image is not None and input_reference_image_pil is None:
@@ -87,6 +101,7 @@ def run_one_case(pipe,
     
     # Call the pipeline
     try:
+        print("Calling pipeline...")
         image, seed = pipe(
             reference_image=input_reference_image_pil,
             edit_image=input_image_pil,
@@ -101,6 +116,7 @@ def run_one_case(pipe,
             repainting_scale=repainting_scale or pipe.input.get("repainting_scale", 1.0),
             lora_path=model_path
         )
+        print(f"Pipeline returned image: {image}, seed: {seed}")
     except Exception as e:
         print(f"Error in pipeline: {e}")
         import traceback
@@ -108,15 +124,20 @@ def run_one_case(pipe,
         return None, seed
     
     # Make sure output directory exists
+    print(f"Ensuring output directory exists: {os.path.dirname(save_path)}")
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
     # Save the image
     try:
+        print(f"Saving image to: {save_path}")
         with FS.put_to(save_path) as local_path:
             image.save(local_path)
+        print(f"Image successfully saved to {local_path}")
         return local_path, seed
     except Exception as e:
         print(f"Error saving image: {e}")
+        import traceback
+        traceback.print_exc()
         return None, seed
 
 

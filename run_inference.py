@@ -25,9 +25,14 @@ USAGE INSTRUCTIONS
 3b. Multi-step image editing:
    python3.10 run_inference.py \
      --mode edit \
-     --input_image ./examples/output_images/generated_subject_20250101_120000.png \
-     --edit_instructions "Make the feathers shorter" "Make the bird's legs longer" \
+     --input_image ./examples/output_images/generated_image_0_5889fc14417243d86aa7.png \
+     --edit_instructions "remove all words and pencils" \
      --output_dir ./examples/output_images
+
+3c. python3.10 run_inference.py --mode edit \
+  --input_image ./examples/output_images/generated_image_0_5889fc14417243d86aa7.png \
+  --edit_instructions "remove all words and pencils" \
+  --output_dir ./examples/output_images
 
 Options:
   --mode                   text2image (default) or edit
