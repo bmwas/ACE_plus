@@ -492,13 +492,32 @@ Install the necessary packages with `pip`:
 cd ACE_plus
 pip install -r repo_requirements.txt
 ```
-ACE++ depends on FLUX.1-Fill-dev as its base model, which you can download from [![HuggingFace link](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev). 
-In order to run the inference code or Gradio demo normally, we have defined the relevant environment variables to specify the location of the model. 
-For model preparation, we provide three methods for downloading the model. The summary of relevant settings is as follows.
 
-|   Model Downloading Method    | Clone to Local Path                                                                                                                                                                                                                                         | Automatic Downloading during Runtime<br>(Setting the Environment Variables using scepter_path in [ACE Models](#-ace-models))                                                                                                       |
-|:-----------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Environment Variables Setting | <pre><code>export FLUX_FILL_PATH="path/to/FLUX.1-Fill-dev"<br>export PORTRAIT_MODEL_PATH="path/to/ACE++ PORTRAIT PATH"<br>export SUBJECT_MODEL_PATH="path/to/ACE++ SUBJECT PATH"<br>export LOCAL_MODEL_PATH="path/to/ACE++ LOCAL EDITING PATH"</code></pre> | <pre><code>export FLUX_FILL_PATH="hf://black-forest-labs/FLUX.1-Fill-dev"<br>export PORTRAIT_MODEL_PATH="${scepter_path}"<br>export SUBJECT_MODEL_PATH="${scepter_path}"<br>export LOCAL_MODEL_PATH="${scepter_path}"</code></pre> |
+## 🏃‍♀️ Running the Python Inference Script
+After installation, set your WandB API key in a `.env` file:
+```bash
+echo "WANDB_API_KEY=your_key_here" >> .env
+```
+Then run the inference:
+```bash
+python3 run_inference.py \
+  --task_type subject \
+  --instruction "A beautiful landscape with mountains, clear blue sky, and a lake" \
+  --output_h 512 \
+  --output_w 512 \
+  --seed 42 \
+  --input_reference_image ./assets/samples/control/resuzed_balnk.webp \
+  --output_dir ./examples/output_images
+```
+**Options**:
+- `--task_type`: portrait, subject, local_editing (default: subject)
+- `--instruction`: prompt text (default shown above)
+- `--output_h`, `--output_w`: height/width in pixels
+- `--seed`: random seed for reproducibility
+- `--input_reference_image`: path to reference image
+- `--output_dir`: directory to save outputs
+
+Console logs (INFO/DEBUG/ERROR) will display runtime details. All metrics and generated images are pushed to the WandB project `ace_plus_inference`.
 
 ## 🚀 Inference
 Under the condition that the environment variables defined in [Installation](#-installation), users can run examples and test your own samples by executing infer.py. 
