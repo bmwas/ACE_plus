@@ -129,7 +129,7 @@ fi
 
 # Run the inference
 log_info "Running inference with LoRA model for task type: $TASK_TYPE"
-log_info "Command: python3.10 infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --input_reference_image \"$INPUT_REFERENCE_IMAGE\" --save_path $OUTPUT_FILE"
+log_info "Command: python3.10 infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --save_path $OUTPUT_FILE"
 
 # Execute the python script with timing information
 log_info "Starting inference process..."
@@ -141,7 +141,6 @@ python3.10 infer_lora.py \
     --output_w $OUTPUT_W \
     --seed $SEED \
     --task_type $TASK_TYPE \
-    --input_reference_image "$INPUT_REFERENCE_IMAGE" \
     --save_path $OUTPUT_FILE
 
 RESULT=$?
