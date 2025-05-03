@@ -144,10 +144,13 @@ class ACEPlusDiffuserInference():
             self.pipe.image_processor = DummyProcessor()
             
             try:
+                # Prepare batch dims for pipeline
+                batch_image = image.unsqueeze(0)
+                batch_mask = mask.unsqueeze(0)
                 image = self.pipe(
                     prompt=prompt,
-                    image=image,
-                    mask_image=mask,
+                    image=batch_image,
+                    mask_image=batch_mask,
                     height=h,
                     width=w,
                     guidance_scale=guide_scale,
