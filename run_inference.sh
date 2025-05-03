@@ -127,9 +127,15 @@ else
     log_warn "nvidia-smi not found. No GPU information available."
 fi
 
+# If no reference image is provided and the task requires it, use the default blank image
+if [ -z "$INPUT_REFERENCE_IMAGE" ]; then
+    INPUT_REFERENCE_IMAGE="./assets/samples/control/resuzed_balnk.webp"
+    log_info "No reference image provided. Using default: $INPUT_REFERENCE_IMAGE"
+fi
+
 # Run the inference
 log_info "Running inference with LoRA model for task type: $TASK_TYPE"
-log_info "Command: python3.10 infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --save_path $OUTPUT_FILE"
+log_info "Command: python3.10 infer_lora.py --instruction \"$INSTRUCTION\" --output_h $OUTPUT_H --output_w $OUTPUT_W --seed $SEED --task_type $TASK_TYPE --input_reference_image \"$INPUT_REFERENCE_IMAGE\" --save_path $OUTPUT_FILE"
 
 # Execute the python script with timing information
 log_info "Starting inference process..."
@@ -141,6 +147,7 @@ python3.10 infer_lora.py \
     --output_w $OUTPUT_W \
     --seed $SEED \
     --task_type $TASK_TYPE \
+    --input_reference_image "$INPUT_REFERENCE_IMAGE" \
     --save_path $OUTPUT_FILE
 
 RESULT=$?
