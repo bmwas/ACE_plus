@@ -91,7 +91,29 @@ class ACEPlusDiffuserInference():
         print(f"Reference image type before preprocessing: {type(reference_image)}")
         if reference_image is not None and hasattr(reference_image, 'size'):
             print(f"Reference image size before preprocessing: {reference_image.size}")
-            
+
+        # Text-to-image mode: no reference image
+        if reference_image is None:
+            print("Text-to-image mode: no reference image provided.")
+            # Load LoRA weights if provided
+            if lora_path is not None:
+                with FS.get_from(lora_path) as local_path:
+                    self.pipe.load_lora_weights(local_path)
+            try:
+                image = self.pipe(
+                    prompt=prompt,
+                    height=output_height,
+                    width=output_width,
+                    guidance_scale=guide_scale,
+                    num_inference_steps=sample_steps,
+                    max_sequence_length=512,
+                    generator=torch.Generator("cpu").manual_seed(seed)
+                ).images[0]
+            finally:
+                if lora_path is not None:
+                    self.pipe.unload_lora_weights()
+            return image, seed
+
         # Make sure we're working with PIL images for the processor
         try:
             # edit_image, edit_mask, change_image, content_image, out_h, out_w, slice_w
