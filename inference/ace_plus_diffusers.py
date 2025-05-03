@@ -107,6 +107,7 @@ class ACEPlusDiffuserInference():
                     guidance_scale=guide_scale,
                     num_inference_steps=sample_steps,
                     max_sequence_length=512,
+                    output_type="pil",
                     generator=torch.Generator("cpu").manual_seed(seed)
                 ).images[0]
             finally:
@@ -133,17 +134,17 @@ class ACEPlusDiffuserInference():
                 with FS.get_from(lora_path) as local_path:
                     self.pipe.load_lora_weights(local_path)
                     
-            # Override the pipe's image processor with a dummy processor that just returns the input
-            # This avoids the error when the flux pipeline's internal processor is called
+            # wrapper to bypass internal preprocess but delegate output postprocess
             original_processor = self.pipe.image_processor
-            
             class DummyProcessor:
+                def __init__(self, orig_processor):
+                    self.orig_processor = orig_processor
                 def preprocess(self, image, **kwargs):
                     return image
                 def postprocess(self, image, output_type=None):
-                    return image
+                    return self.orig_processor.postprocess(image, output_type)
 
-            self.pipe.image_processor = DummyProcessor()
+            self.pipe.image_processor = DummyProcessor(original_processor)
             
             try:
                 # Prepare batch dims for pipeline
@@ -158,6 +159,7 @@ class ACEPlusDiffuserInference():
                     guidance_scale=guide_scale,
                     num_inference_steps=sample_steps,
                     max_sequence_length=512,
+                    output_type="pil",
                     generator=generator
                 ).images[0]
             finally:
