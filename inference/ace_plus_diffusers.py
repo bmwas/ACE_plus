@@ -118,20 +118,61 @@ class ACEPlusDiffuserInference():
         # Branch 2: Image editing WITHOUT reference image (edit image exists, reference image is None)
         elif reference_image is None and edit_image is not None:
             print("Edit mode: global edit, no reference image.")
-            # Use edit_image as the image to edit, pass None for reference_image
             try:
-                image, seed = self.image_processor.global_edit(
+                # Prepare a mask that covers the whole image if not provided
+                if edit_mask is None:
+                    if hasattr(edit_image, 'size'):
+                        w, h = edit_image.size
+                    else:
+                        # Assume tensor [C, H, W]
+                        h, w = edit_image.shape[-2:]
+                    from PIL import Image as PILImage
+                    edit_mask = PILImage.new("L", (w, h), 255)
+                # Preprocess using ACEPlusImageProcessor
+                image, mask, _, _, out_h, out_w, slice_w = self.image_processor.preprocess(
+                    reference_image=edit_image,
                     edit_image=edit_image,
                     edit_mask=edit_mask,
-                    prompt=prompt,
-                    output_height=output_height,
-                    output_width=output_width,
-                    sample_steps=sample_steps,
-                    guide_scale=guide_scale,
-                    lora_path=lora_path,
-                    seed=seed
+                    width=output_width,
+                    height=output_height,
+                    repainting_scale=repainting_scale
                 )
-                return image, seed
+                h, w = image.shape[1:]
+                generator = torch.Generator("cpu").manual_seed(seed)
+                # Optionally load LoRA weights
+                if lora_path is not None:
+                    with FS.get_from(lora_path) as local_path:
+                        self.pipe.load_lora_weights(local_path)
+                # Patch the image processor to bypass internal preprocess
+                original_processor = self.pipe.image_processor
+                class DummyProcessor:
+                    def __init__(self, orig_processor):
+                        self.orig_processor = orig_processor
+                    def preprocess(self, image, **kwargs):
+                        return image
+                    def postprocess(self, image, output_type=None):
+                        return self.orig_processor.postprocess(image, output_type)
+                self.pipe.image_processor = DummyProcessor(original_processor)
+                try:
+                    batch_image = image.unsqueeze(0)
+                    batch_mask = mask.unsqueeze(0)
+                    image = self.pipe(
+                        prompt=prompt,
+                        image=batch_image,
+                        mask_image=batch_mask,
+                        height=h,
+                        width=w,
+                        guidance_scale=guide_scale,
+                        num_inference_steps=sample_steps,
+                        max_sequence_length=512,
+                        output_type="pil",
+                        generator=generator
+                    ).images[0]
+                finally:
+                    self.pipe.image_processor = original_processor
+                if lora_path is not None:
+                    self.pipe.unload_lora_weights()
+                return self.image_processor.postprocess(image, slice_w, out_w, out_h), seed
             except Exception as e:
                 print(f"Error in global edit pipeline: {str(e)}")
                 import traceback
