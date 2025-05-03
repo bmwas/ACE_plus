@@ -1,6 +1,35 @@
 #!/usr/bin/env python3
 """
 run_inference.py - Demo script for ACE_plus LoRA model inference (converted from bash)
+
+USAGE INSTRUCTIONS
+------------------
+1. Install dependencies:
+   cd ACE_plus
+   pip install -r repo_requirements.txt
+
+2. Set your WandB API key in a `.env` file:
+   echo "WANDB_API_KEY=your_key_here" >> .env
+
+3. Run the inference script:
+   python3.10 run_inference.py \
+     --task_type subject \
+     --instruction "A beautiful landscape with mountains, clear blue sky, and a lake" \
+     --output_h 512 \
+     --output_w 512 \
+     --seed 42 \
+     --input_reference_image ./assets/samples/control/resuzed_balnk.webp \
+     --output_dir ./examples/output_images
+
+Options:
+  --task_type              portrait, subject, local_editing (default: subject)
+  --instruction            prompt text (default shown above)
+  --output_h, --output_w   height/width in pixels
+  --seed                   random seed for reproducibility
+  --input_reference_image  path to reference image
+  --output_dir             directory to save outputs
+
+Console logs (INFO/DEBUG/ERROR) will display runtime details. All metrics and generated images are pushed to the WandB project 'ace_plus_inference'.
 """
 import os
 import sys
@@ -108,6 +137,7 @@ def main():
         'output_w': args.output_w,
         'seed': args.seed,
         'input_reference_image': args.input_reference_image,
+        'output_dir': args.output_dir,
     })
 
     # Build inference command
@@ -137,7 +167,8 @@ def main():
             # Log metrics and image to wandb
             wandb.log({
                 'elapsed_time': elapsed,
-                'generated_image': wandb.Image(output_file)
+                'generated_image': wandb.Image(output_file),
+                'output_dir': args.output_dir
             })
         else:
             log_warn(f"Output file not found: {output_file}")
