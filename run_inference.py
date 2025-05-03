@@ -229,6 +229,15 @@ def run_edit(args):
         start = time.time()
         proc = subprocess.run(cmd, capture_output=True, text=True)
         elapsed = time.time() - start
+
+        # Always print subprocess output for debugging
+        if proc.stdout:
+            print("[infer_lora.py STDOUT]:")
+            print(proc.stdout)
+        if proc.stderr:
+            print("[infer_lora.py STDERR]:")
+            print(proc.stderr)
+
         if proc.returncode == 0:
             log_info(f"[Edit Step {idx+1}] Completed in {elapsed:.2f}s")
             if os.path.isfile(output_file):
