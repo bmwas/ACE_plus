@@ -130,3 +130,31 @@ class ACEPlusImageProcessor():
         else:
             output_image = image
         return output_image
+
+    def global_edit(self,
+                   edit_image=None,
+                   edit_mask=None,
+                   prompt='',
+                   output_height=512,
+                   output_width=512,
+                   sample_steps=28,
+                   guide_scale=50,
+                   lora_path=None,
+                   seed=-1):
+        """
+        Global image editing: takes an input image and prompt, returns the edited image.
+        For now, this is a minimal implementation that simply returns the input image unchanged,
+        as a placeholder for future global editing logic.
+        """
+        # TODO: Replace this with actual global editing logic using the diffusion pipeline.
+        print("[global_edit] Called with prompt:", prompt)
+        # Convert tensor to PIL if needed
+        if isinstance(edit_image, torch.Tensor):
+            from torchvision.transforms.functional import to_pil_image
+            pil_image = to_pil_image(edit_image)
+        elif isinstance(edit_image, Image.Image):
+            pil_image = edit_image
+        else:
+            raise ValueError("edit_image must be a torch.Tensor or PIL.Image.Image")
+        # For now, just return the input image and seed
+        return pil_image, seed
