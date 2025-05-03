@@ -34,6 +34,12 @@ USAGE INSTRUCTIONS
   --edit_instructions "remove all words and pencils" \
   --output_dir ./examples/output_images
 
+3d. python3.10 run_inference.py --mode edit_with_reference \
+  --input_image ./examples/output_images/generated_image_0_5889fc14417243d86aa7.png \
+  --edit_instructions "remove all words and pencils" \
+  --input_reference_image ./assets/samples/control/resuzed_balnk.webp \
+  --output_dir ./examples/output_images
+
 Options:
   --mode                   text2image (default), edit, or edit_with_reference
   --task_type              portrait, subject, local_editing (default: subject)
@@ -210,6 +216,10 @@ def run_edit(args, with_reference=False):
         'input_reference_image': args.input_reference_image if with_reference else None
     })
     current_image_path = args.input_image
+    # Log initial input images and instructions as a WandB Table for easy comparison
+    input_img = wandb.Image(args.input_image) if args.input_image and os.path.isfile(args.input_image) else None
+    ref_img = wandb.Image(args.input_reference_image) if with_reference and args.input_reference_image and os.path.isfile(args.input_reference_image) else None
+    edit_table = wandb.Table(columns=["step", "input_image", "reference_image", "edit_instruction", "output_image"])
     for idx, instruction in enumerate(args.edit_instructions):
         output_file = os.path.join(
             args.output_dir,
@@ -248,9 +258,18 @@ def run_edit(args, with_reference=False):
             if os.path.isfile(output_file):
                 size = os.path.getsize(output_file)
                 log_debug(f"[Edit Step {idx+1}] Output image size: {size} bytes")
+                out_img = wandb.Image(output_file)
+                # Log to table: for step 1, show input/ref; for later steps, input is previous output
+                edit_table.add_data(
+                    idx+1,
+                    wandb.Image(current_image_path) if os.path.isfile(current_image_path) else None,
+                    ref_img if with_reference else None,
+                    instruction,
+                    out_img
+                )
                 wandb.log({
                     f'editstep{idx+1}_instruction': instruction,
-                    f'editstep{idx+1}_image': wandb.Image(output_file),
+                    f'editstep{idx+1}_image': out_img,
                     'output_dir': args.output_dir,
                     'step': idx+1,
                     'elapsed_time': elapsed
@@ -264,6 +283,8 @@ def run_edit(args, with_reference=False):
             wandb.log({f'editstep{idx+1}_error': proc.stderr})
             run.finish()
             sys.exit(proc.returncode)
+    # Log the comparison table at the end
+    wandb.log({"edit_comparison_table": edit_table})
     run.finish()
     log_info("All edit steps completed.")
 
