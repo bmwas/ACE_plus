@@ -140,6 +140,8 @@ class ACEPlusDiffuserInference():
             class DummyProcessor:
                 def preprocess(self, image, **kwargs):
                     return image
+                def postprocess(self, image, output_type=None):
+                    return image
 
             self.pipe.image_processor = DummyProcessor()
             
