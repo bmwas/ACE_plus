@@ -35,15 +35,15 @@ USAGE INSTRUCTIONS
   --output_dir ./examples/output_images
 
 Options:
-  --mode                   text2image (default) or edit
+  --mode                   text2image (default), edit, or edit_with_reference
   --task_type              portrait, subject, local_editing (default: subject)
-  --instruction            prompt text (for text2image)
+  --instruction            prompt text (for text2image) or edit prompt (for edit modes)
   --output_h, --output_w   height/width in pixels
   --seed                   random seed for reproducibility
-  --input_reference_image  path to reference image
+  --input_reference_image  path to reference image (used in text2image or edit_with_reference modes)
   --output_dir             directory to save outputs
-  --input_image            path to initial image for editing (edit mode)
-  --edit_instructions      one or more edit instructions (edit mode)
+  --input_image            path to initial image for editing (edit modes)
+  --edit_instructions      one or more edit instructions (edit modes)
 
 Console logs (INFO/DEBUG/ERROR) will display runtime details. All metrics and generated images are pushed to the WandB project 'ace_plus_inference'.
 """
@@ -78,23 +78,23 @@ def log_debug(msg):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="ACE_plus LoRA Model Inference")
-    parser.add_argument('--mode', choices=['text2image', 'edit'], default='text2image',
-                        help='Choose inference mode: text2image or edit (default: text2image)')
+    parser.add_argument('--mode', choices=['text2image', 'edit', 'edit_with_reference'], default='text2image',
+                        help='Choose inference mode: text2image, edit (global edit), or edit_with_reference (edit with reference image)')
     parser.add_argument('--task_type', choices=['portrait', 'subject', 'local_editing'], default='subject',
                         help='Task type: portrait, subject, local_editing')
     parser.add_argument('--instruction', default='A beautiful landscape with mountains, clear blue sky, and a lake',
-                        help='Text prompt for generation (text2image mode only)')
+                        help='Text prompt for generation (text2image mode only, or edit prompt for edit modes)')
     parser.add_argument('--output_h', type=int, default=512, help='Output height')
     parser.add_argument('--output_w', type=int, default=512, help='Output width')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
-    parser.add_argument('--input_reference_image', default='./assets/samples/control/resuzed_balnk.webp',
-                        help='Path to reference image')
+    parser.add_argument('--input_reference_image', default=None,
+                        help='Path to reference image (used in text2image or edit_with_reference modes)')
     parser.add_argument('--output_dir', default='./examples/output_images',
                         help='Directory to save outputs')
     # Edit mode arguments
-    parser.add_argument('--input_image', default=None, help='Path to initial image for editing (edit mode)')
+    parser.add_argument('--input_image', default=None, help='Path to initial image for editing (edit modes)')
     parser.add_argument('--edit_instructions', nargs='*', default=None,
-                        help='Edit instructions (one or more, edit mode)')
+                        help='Edit instructions (one or more, edit modes)')
     return parser.parse_args()
 
 def check_dependencies():
@@ -181,7 +181,7 @@ def run_text2image(args):
         sys.exit(proc.returncode)
     run.finish()
 
-def run_edit(args):
+def run_edit(args, with_reference=False):
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs(args.output_dir, exist_ok=True)
     if not args.input_image or not os.path.isfile(args.input_image):
@@ -190,22 +190,25 @@ def run_edit(args):
     if not args.edit_instructions or len(args.edit_instructions) == 0:
         log_error("For edit mode, provide at least one --edit_instructions value.")
         sys.exit(1)
+    if with_reference and (not args.input_reference_image or not os.path.isfile(args.input_reference_image)):
+        log_error("For edit_with_reference mode, --input_reference_image must be provided and must exist.")
+        sys.exit(1)
     api_key = os.getenv('WANDB_API_KEY')
     if api_key:
         wandb.login(key=api_key)
     else:
         log_warn("WANDB_API_KEY not found in environment; skipping wandb login.")
     run = wandb.init(project='ace_plus_inference', config={
-        'mode': 'edit',
+        'mode': 'edit_with_reference' if with_reference else 'edit',
         'input_image': args.input_image,
         'edit_instructions': args.edit_instructions,
         'output_dir': args.output_dir,
         'output_h': args.output_h,
         'output_w': args.output_w,
         'seed': args.seed,
-        'task_type': args.task_type
+        'task_type': args.task_type,
+        'input_reference_image': args.input_reference_image if with_reference else None
     })
-    # Iterative editing loop
     current_image_path = args.input_image
     for idx, instruction in enumerate(args.edit_instructions):
         output_file = os.path.join(
@@ -225,6 +228,8 @@ def run_edit(args):
             '--task_type', args.task_type,
             '--save_path', output_file
         ]
+        if with_reference:
+            cmd += ['--input_reference_image', args.input_reference_image]
         log_info(f"Command: {' '.join(cmd)}")
         start = time.time()
         proc = subprocess.run(cmd, capture_output=True, text=True)
@@ -267,7 +272,9 @@ def main():
     if args.mode == 'text2image':
         run_text2image(args)
     elif args.mode == 'edit':
-        run_edit(args)
+        run_edit(args, with_reference=False)
+    elif args.mode == 'edit_with_reference':
+        run_edit(args, with_reference=True)
     else:
         log_error(f"Unknown mode: {args.mode}")
         sys.exit(1)

@@ -92,9 +92,9 @@ class ACEPlusDiffuserInference():
         if reference_image is not None and hasattr(reference_image, 'size'):
             print(f"Reference image size before preprocessing: {reference_image.size}")
 
-        # Text-to-image mode: no reference image
-        if reference_image is None:
-            print("Text-to-image mode: no reference image provided.")
+        # Branch 1: Simple text-to-image (no edit image, no reference image)
+        if reference_image is None and edit_image is None:
+            print("Text-to-image mode: no reference or edit image provided.")
             # Load LoRA weights if provided
             if lora_path is not None:
                 with FS.get_from(lora_path) as local_path:
@@ -115,67 +115,93 @@ class ACEPlusDiffuserInference():
                     self.pipe.unload_lora_weights()
             return image, seed
 
-        # Make sure we're working with PIL images for the processor
-        try:
-            # edit_image, edit_mask, change_image, content_image, out_h, out_w, slice_w
-            image, mask, _, _, out_h, out_w, slice_w = self.image_processor.preprocess(reference_image, edit_image, edit_mask,
-                                                                                width = output_width,
-                                                                                height = output_height,
-                                                                                repainting_scale = repainting_scale)
-            
-            print(f"Image shape after ACE+ preprocessing: {image.shape if hasattr(image, 'shape') else 'Not a tensor'}")
-            
-            h, w = image.shape[1:]
-            generator = torch.Generator("cpu").manual_seed(seed)
-            masked_image_latents = self.prepare_input(image, mask,
-                                                    batch_size=len(prompt), height=h, width=w, generator=generator)
-
-            if lora_path is not None:
-                with FS.get_from(lora_path) as local_path:
-                    self.pipe.load_lora_weights(local_path)
-                    
-            # wrapper to bypass internal preprocess but delegate output postprocess
-            original_processor = self.pipe.image_processor
-            class DummyProcessor:
-                def __init__(self, orig_processor):
-                    self.orig_processor = orig_processor
-                def preprocess(self, image, **kwargs):
-                    return image
-                def postprocess(self, image, output_type=None):
-                    return self.orig_processor.postprocess(image, output_type)
-
-            self.pipe.image_processor = DummyProcessor(original_processor)
-            
+        # Branch 2: Image editing WITHOUT reference image (edit image exists, reference image is None)
+        elif reference_image is None and edit_image is not None:
+            print("Edit mode: global edit, no reference image.")
+            # Use edit_image as the image to edit, pass None for reference_image
             try:
-                # Prepare batch dims for pipeline
-                batch_image = image.unsqueeze(0)
-                batch_mask = mask.unsqueeze(0)
-                image = self.pipe(
+                image, seed = self.image_processor.global_edit(
+                    edit_image=edit_image,
+                    edit_mask=edit_mask,
                     prompt=prompt,
-                    image=batch_image,
-                    mask_image=batch_mask,
-                    height=h,
-                    width=w,
-                    guidance_scale=guide_scale,
-                    num_inference_steps=sample_steps,
-                    max_sequence_length=512,
-                    output_type="pil",
-                    generator=generator
-                ).images[0]
-            finally:
-                # Restore original processor
-                self.pipe.image_processor = original_processor
+                    output_height=output_height,
+                    output_width=output_width,
+                    sample_steps=sample_steps,
+                    guide_scale=guide_scale,
+                    lora_path=lora_path,
+                    seed=seed
+                )
+                return image, seed
+            except Exception as e:
+                print(f"Error in global edit pipeline: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                raise
+
+        # Branch 3: Image editing WITH reference image (edit image and reference image provided)
+        else:
+            print("Edit mode: using edit_image and reference_image.")
+            # Make sure we're working with PIL images for the processor
+            try:
+                # edit_image, edit_mask, change_image, content_image, out_h, out_w, slice_w
+                image, mask, _, _, out_h, out_w, slice_w = self.image_processor.preprocess(reference_image, edit_image, edit_mask,
+                                                                                    width = output_width,
+                                                                                    height = output_height,
+                                                                                    repainting_scale = repainting_scale)
                 
-            if lora_path is not None:
-                self.pipe.unload_lora_weights()
+                print(f"Image shape after ACE+ preprocessing: {image.shape if hasattr(image, 'shape') else 'Not a tensor'}")
                 
-            return self.image_processor.postprocess(image, slice_w, out_w, out_h), seed
-            
-        except Exception as e:
-            print(f"Error in ACE+ diffuser pipeline: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise
+                h, w = image.shape[1:]
+                generator = torch.Generator("cpu").manual_seed(seed)
+                masked_image_latents = self.prepare_input(image, mask,
+                                                        batch_size=len(prompt), height=h, width=w, generator=generator)
+
+                if lora_path is not None:
+                    with FS.get_from(lora_path) as local_path:
+                        self.pipe.load_lora_weights(local_path)
+                        
+                # wrapper to bypass internal preprocess but delegate output postprocess
+                original_processor = self.pipe.image_processor
+                class DummyProcessor:
+                    def __init__(self, orig_processor):
+                        self.orig_processor = orig_processor
+                    def preprocess(self, image, **kwargs):
+                        return image
+                    def postprocess(self, image, output_type=None):
+                        return self.orig_processor.postprocess(image, output_type)
+
+                self.pipe.image_processor = DummyProcessor(original_processor)
+                
+                try:
+                    # Prepare batch dims for pipeline
+                    batch_image = image.unsqueeze(0)
+                    batch_mask = mask.unsqueeze(0)
+                    image = self.pipe(
+                        prompt=prompt,
+                        image=batch_image,
+                        mask_image=batch_mask,
+                        height=h,
+                        width=w,
+                        guidance_scale=guide_scale,
+                        num_inference_steps=sample_steps,
+                        max_sequence_length=512,
+                        output_type="pil",
+                        generator=generator
+                    ).images[0]
+                finally:
+                    # Restore original processor
+                    self.pipe.image_processor = original_processor
+                    
+                if lora_path is not None:
+                    self.pipe.unload_lora_weights()
+                    
+                return self.image_processor.postprocess(image, slice_w, out_w, out_h), seed
+                
+            except Exception as e:
+                print(f"Error in ACE+ diffuser pipeline: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                raise
 
 
 if __name__ == '__main__':
