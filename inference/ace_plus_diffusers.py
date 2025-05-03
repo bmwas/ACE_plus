@@ -146,7 +146,8 @@ class ACEPlusDiffuserInference():
             try:
                 image = self.pipe(
                     prompt=prompt,
-                    masked_image_latents=masked_image_latents,
+                    image=image,
+                    mask_image=mask,
                     height=h,
                     width=w,
                     guidance_scale=guide_scale,
